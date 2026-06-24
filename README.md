@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 역사 고증 검색 — 프론트엔드
 
-## Getting Started
+현대어로 물으면 국역 사료에서 맥락이 같은 근거를 찾아 출처와 함께 답하는 멀티턴 대화형 고증 검색의 **프론트엔드**입니다. (PRD: [가이드/0001](가이드/0001-history-verification-saas.md))
 
-First, run the development server:
+## 화면 (3-패널, 가이드 #0004)
+
+- **좌**: 프로젝트별 대화 리스트 + "새 대화" (#0008)
+- **중앙**: 대화 + 자유 입력창 + 후속/좁히기 칩 (#0005~#0007)
+- **우**: 선택한 답변의 근거 자료 + 시각자료 (#0011, #0012)
+
+## 실행
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install   # 또는 npm install
+pnpm dev       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+기본은 **mock 모드**입니다 — Next 라우트 핸들러(`app/api/*`)가 가이드 #0001 계약대로 응답을 흉내 냅니다. 다음을 입력해 동작을 확인할 수 있습니다:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- "측우기" 류 → 답변 + 근거 자료 + 시각자료
+- "자격루" → 근거는 있으나 시각자료 없음(no-image fallback)
+- "그건?" 등 짧은 입력 → 좁히기(clarify) 질문 + 후보
+- "없는내용" → 환각 가드 "확인되지 않습니다"
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 실제 BE 연동
 
-## Learn More
+FastAPI BE가 준비되면 환경변수만 설정하면 됩니다(코드 수정 없음):
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# .env.local
+NEXT_PUBLIC_API_BASE=http://localhost:8000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+설정 시 `app/lib/api.ts`의 fetch가 mock 대신 이 주소로 직접 호출합니다(CORS). 미설정이면 mock 폴백. 자세한 키는 [.env.example](.env.example) 참고.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 구조
 
-## Deploy on Vercel
+```
+app/
+  api/                # mock 라우트 핸들러 (BE 붙으면 우회됨)
+    conversations/[id]/messages/route.ts
+    conversations/route.ts
+    projects/route.ts
+  components/         # ProjectSidebar · ChatPanel · EvidencePanel
+  lib/
+    types.ts          # 가이드 #0001 API 계약(한국어 키) 동결
+    api.ts            # fetch 레이어 (NEXT_PUBLIC_API_BASE 기반)
+    mock-data.ts      # mock 응답 데이터
+    useConversation.ts# 대화 상태 훅
+  page.tsx            # 3-패널 조립
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+기술 스택: Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4.
