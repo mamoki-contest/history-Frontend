@@ -3,14 +3,31 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createConversation,
+  createStandaloneConversation,
+  getMessages,
   listConversations,
   listProjects,
   sendMessage,
 } from "./api";
-import type { ChatMessage, Conversation, Project } from "./types";
+import type { ChatMessage, Conversation, MessageOut, Project } from "./types";
 
 let seq = 0;
 const newId = (p: string) => `${p}-${Date.now()}-${seq++}`;
+
+/** 저장된 메시지(MessageOut) → 화면 메시지(ChatMessage). 기록엔 answer만 저장됨. */
+function toChatMessage(m: MessageOut): ChatMessage {
+  if (m.role === "user") return { id: m.id, role: "user", content: m.content };
+  return {
+    id: m.id,
+    role: "assistant",
+    mode: "answer",
+    answer: m.content,
+    results: m.results ?? [],
+    visuals: m.visuals ?? [],
+    followups: m.followups ?? [],
+    confidence: m.confidence ?? 0,
+  };
+}
 
 /**
  * 대화 한 건의 상태와 동작을 모은 훅.
@@ -21,31 +38,62 @@ const newId = (p: string) => `${p}-${Date.now()}-${seq++}`;
 export function useConversation() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConvId, setActiveConvId] = useState<string>("c1");
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // 우측 패널이 보여줄 답변(메시지) id
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // 좌측 리스트 로드 (#0008)
+  // 좌측 리스트 로드 — 프로젝트 목록 → 프로젝트별 대화 (#0008)
   useEffect(() => {
-    listProjects().then(setProjects).catch(() => {});
-    listConversations().then(setConversations).catch(() => {});
+    let cancelled = false;
+    (async () => {
+      try {
+        const ps = await listProjects();
+        if (cancelled) return;
+        setProjects(ps);
+        const lists = await Promise.all(
+          ps.map((p) => listConversations(p.id).catch(() => [])),
+        );
+        if (cancelled) return;
+        const all = lists.flat();
+        setConversations(all);
+        if (all.length && !activeConvId) setActiveConvId(all[0].id);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // 최초 1회만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const send = useCallback(
-    async (입력: string) => {
-      const text = 입력.trim();
+    async (query: string) => {
+      const text = query.trim();
       if (!text || loading) return;
       setError(null);
       setMessages((m) => [
         ...m,
-        { id: newId("u"), role: "user", 입력: text },
+        { id: newId("u"), role: "user", content: text },
       ]);
       setLoading(true);
       try {
-        const res = await sendMessage(activeConvId, text);
+        // 활성 대화가 없으면(빈 BE 등) 즉석에서 하나 만든다.
+        let convId = activeConvId;
+        if (!convId) {
+          const { conversation_id } = await createStandaloneConversation();
+          convId = conversation_id;
+          setActiveConvId(conversation_id);
+          setConversations((c) => [
+            { id: conversation_id, project_id: null, title: text.slice(0, 20) },
+            ...c,
+          ]);
+        }
+        const res = await sendMessage(convId, text);
         const id = newId("a");
         setMessages((m) => [...m, { id, role: "assistant", ...res }]);
         // 새 answer면 우측을 최신 자료로 자동 전환(#0011, #0012)
@@ -62,21 +110,37 @@ export function useConversation() {
   // "새 대화" 시작 (#0008)
   const startConversation = useCallback(async (projectId: string) => {
     try {
-      const conv = await createConversation(projectId);
+      const { conversation_id } = await createConversation(projectId);
+      const conv: Conversation = {
+        id: conversation_id,
+        project_id: projectId,
+        title: "새 대화",
+      };
       setConversations((c) => [conv, ...c]);
-      setActiveConvId(conv.id);
-    } catch {
-      /* mock 폴백 */
+      setActiveConvId(conversation_id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     }
     setMessages([]);
     setSelectedId(null);
   }, []);
 
-  // 대화 선택 → 로드 (#0008). mock 단계라 메시지는 비워서 새로 시작.
-  const selectConversation = useCallback((id: string) => {
+  // 대화 선택 → 기록 로드 (#0008)
+  const selectConversation = useCallback(async (id: string) => {
     setActiveConvId(id);
-    setMessages([]);
     setSelectedId(null);
+    try {
+      const history = await getMessages(id);
+      const msgs = history.map(toChatMessage);
+      setMessages(msgs);
+      // 마지막 answer를 우측에 자동 표시
+      const lastAnswer = [...msgs]
+        .reverse()
+        .find((m) => m.role === "assistant" && m.mode === "answer");
+      if (lastAnswer) setSelectedId(lastAnswer.id);
+    } catch {
+      setMessages([]);
+    }
   }, []);
 
   return {

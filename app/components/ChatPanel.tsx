@@ -69,7 +69,7 @@ export default function ChatPanel({
               return (
                 <div key={m.id} className="self-end max-w-[80%]">
                   <div className="rounded-2xl rounded-br-sm bg-accent px-4 py-2.5 text-[15px] text-white">
-                    {m.입력}
+                    {m.content}
                   </div>
                 </div>
               );
@@ -79,9 +79,9 @@ export default function ChatPanel({
                 <div key={m.id} className="max-w-[90%] self-start">
                   <div className="rounded-2xl rounded-bl-sm border-l-4 border-accent bg-card px-4 py-3">
                     <div className="text-xs text-muted">질문을 조금 좁혀볼까요?</div>
-                    <div className="mt-1 text-[15px]">{m.질문}</div>
+                    <div className="mt-1 text-[15px]">{m.question}</div>
                     <div className="mt-2 flex flex-wrap">
-                      {m.후보.map((c) => (
+                      {m.suggestions.map((c) => (
                         <Chip key={c} text={c} onClick={() => onSend(c)} />
                       ))}
                     </div>
@@ -104,11 +104,11 @@ export default function ChatPanel({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted">답변</span>
                     <span className="text-[11px] text-muted">
-                      신뢰도 {m.신뢰도}
+                      신뢰도 {m.confidence}
                     </span>
                   </div>
                   <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">
-                    {m.답변}
+                    {m.answer ?? "근거 자료에서 확인되지 않습니다."}
                   </p>
                   {!selected && (
                     <span className="mt-2 inline-block text-xs text-accent">
@@ -116,11 +116,11 @@ export default function ChatPanel({
                     </span>
                   )}
                 </button>
-                {m.후속질문.length > 0 && (
+                {m.followups.length > 0 && (
                   <div className="mt-2">
                     <div className="px-1 text-xs text-muted">이어서 궁금할 만한 것</div>
                     <div className="mt-1 flex flex-wrap">
-                      {m.후속질문.map((f) => (
+                      {m.followups.map((f) => (
                         <Chip key={f} text={f} onClick={() => onSend(f)} />
                       ))}
                     </div>

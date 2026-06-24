@@ -1,20 +1,9 @@
 import { NextResponse } from "next/server";
-import { mockConversations } from "@/app/lib/mock-data";
-import type { Conversation } from "@/app/lib/types";
+import type { ConversationCreated } from "@/app/lib/types";
 
-// GET /api/conversations  — 좌측 리스트 (#0008, mock)
-export async function GET() {
-  return NextResponse.json(mockConversations);
-}
-
-// POST /api/conversations  — "새 대화" 시작 (#0008, mock)
-export async function POST(req: Request) {
-  const { projectId } = (await req.json()) as { projectId: string };
-  const conv: Conversation = {
-    id: `c${Date.now()}`,
-    projectId: projectId ?? "p1",
-    제목: "새 대화",
-    updatedAt: new Date().toISOString(),
-  };
-  return NextResponse.json(conv);
+// POST /api/conversations  — 프로젝트 없는 새 대화 (실제 BE 스키마, mock)
+// 201 + { conversation_id }
+export async function POST() {
+  const body: ConversationCreated = { conversation_id: `c${Date.now()}` };
+  return NextResponse.json(body, { status: 201 });
 }

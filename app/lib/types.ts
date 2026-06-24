@@ -1,64 +1,80 @@
-// 가이드 #0001 API 계약을 TS 타입으로 동결한다 — FE/BE 단일 진실.
-// 한국어 키를 계약 그대로 사용한다(결정: 한국어 키 유지).
+// 실제 BE의 openapi.json 스키마를 TS 타입으로 동결한다 — FE/BE 단일 진실.
+// (영어 키. 가이드 #0001은 한국어 키였으나 실제 구현은 프로토타입 형태의 영어 키를 따른다.)
 
-/** 근거 자료 한 건 (국역 사료 인용) */
-export interface 근거자료 {
-  서명: string;
-  기사명: string;
-  점수: number;
-  본문: string;
+/** 근거 자료 한 건 (국역 사료 인용) — openapi EvidenceItem */
+export interface EvidenceItem {
+  book: string;
+  title: string;
+  score: number;
+  text: string;
 }
 
-/** 시각자료 한 건 (사전 검수된 문화유산 이미지) */
-export interface 시각자료 {
-  개체: string;
-  이미지URL: string;
-  출처: string;
-  라이선스: string;
+/** 시각자료 한 건 (사전 검수된 문화유산 이미지) — openapi VisualItem */
+export interface VisualItem {
+  entity: string;
+  image_url: string;
+  source: string;
+  license: string;
 }
 
-/** mode=answer 응답 — 한 답변(메시지)이 자기 자료를 묶어 보유한다(#0012) */
+/** mode=answer 응답 — openapi AnswerResponse */
 export interface AnswerResponse {
   mode: "answer";
-  답변: string;
-  근거자료: 근거자료[];
-  시각자료: 시각자료[];
-  후속질문: string[];
-  신뢰도: number;
+  answer: string | null;
+  results: EvidenceItem[];
+  visuals: VisualItem[];
+  followups: string[];
+  confidence: number;
 }
 
-/** mode=clarify 응답 — 신뢰도 < 임계값일 때 되묻기(#0007) */
+/** mode=clarify 응답 — openapi ClarifyResponse */
 export interface ClarifyResponse {
   mode: "clarify";
-  질문: string;
-  후보: string[];
+  question: string;
+  suggestions: string[];
 }
 
 export type MessageResponse = AnswerResponse | ClarifyResponse;
 
-/** 한 턴의 사용자 입력 */
+/** 한 턴의 사용자 입력 — openapi MessageRequest */
 export interface MessageRequest {
-  입력: string;
+  query: string;
+  force_results?: boolean;
 }
 
-// ── 클라이언트 측 대화 상태 모델 ───────────────────────────
+/** 저장된 메시지 한 건 (대화 기록 로드용) — openapi MessageOut */
+export interface MessageOut {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  results?: EvidenceItem[];
+  visuals?: VisualItem[];
+  followups?: string[];
+  confidence?: number | null;
+}
+
+/** 좌측 리스트의 프로젝트 — openapi ProjectOut */
+export interface Project {
+  id: string;
+  name: string;
+}
+
+/** 좌측 리스트의 대화 — openapi ConversationOut */
+export interface Conversation {
+  id: string;
+  project_id: string | null;
+  title: string;
+}
+
+/** 대화 생성 응답 — openapi ConversationCreated */
+export interface ConversationCreated {
+  conversation_id: string;
+}
+
+// ── 클라이언트 측 화면 상태 모델 ───────────────────────────
 
 /** 화면에 쌓이는 메시지 한 줄 */
 export type ChatMessage =
-  | { id: string; role: "user"; 입력: string }
+  | { id: string; role: "user"; content: string }
   | ({ id: string; role: "assistant" } & AnswerResponse)
   | ({ id: string; role: "assistant" } & ClarifyResponse);
-
-/** 좌측 리스트의 대화 (#0008) */
-export interface Conversation {
-  id: string;
-  projectId: string;
-  제목: string;
-  updatedAt: string;
-}
-
-/** 좌측 리스트의 프로젝트 (#0008) */
-export interface Project {
-  id: string;
-  이름: string;
-}

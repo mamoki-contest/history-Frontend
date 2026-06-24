@@ -24,29 +24,46 @@ pnpm dev       # http://localhost:3000
 
 ## 실제 BE 연동
 
-FastAPI BE가 준비되면 환경변수만 설정하면 됩니다(코드 수정 없음):
+환경변수만 설정하면 mock 대신 실제 FastAPI BE로 직접 호출합니다(코드 수정 없음):
 
 ```bash
-# .env.local
-NEXT_PUBLIC_API_BASE=http://localhost:8000
+# .env (또는 .env.local)
+NEXT_PUBLIC_API_BASE=http://xujong2.iptime.org
 ```
 
-설정 시 `app/lib/api.ts`의 fetch가 mock 대신 이 주소로 직접 호출합니다(CORS). 미설정이면 mock 폴백. 자세한 키는 [.env.example](.env.example) 참고.
+- 미설정이면 Next 라우트 핸들러 mock(`/api/*`)으로 폴백.
+- 끝 슬래시(`/`)는 `app/lib/api.ts`가 자동으로 제거합니다.
+- `NEXT_PUBLIC_*`은 dev 서버 시작 시점에 읽히므로, 값 변경 후 dev 서버를 재시작하세요.
+- BE는 익명 세션 쿠키(ADR-0005)를 쓰므로 fetch는 `credentials: "include"`로 호출합니다. BE CORS가 해당 origin + `allow-credentials`를 허용해야 합니다(현재 `http://localhost:3000` 허용 확인됨).
+
+> **스키마 주의:** 실제 BE는 **영어 키**(`answer, results, visuals, followups, confidence` / `mode: "answer"|"clarify"`)를 씁니다. 가이드 #0001 문서는 한국어 키였으나 실제 구현은 프로토타입 형태의 영어 키를 따릅니다. `app/lib/types.ts`는 실제 BE openapi.json 기준입니다.
+
+## API 엔드포인트 (실제 BE openapi.json 기준)
+
+| 메서드 | 경로 | 용도 |
+|---|---|---|
+| GET | `/api/projects` | 프로젝트 목록 |
+| GET | `/api/projects/{project_id}/conversations` | 프로젝트별 대화 목록 |
+| POST | `/api/projects/{project_id}/conversations` | 새 대화 → `{conversation_id}` |
+| POST | `/api/conversations` | 프로젝트 없는 새 대화 → `{conversation_id}` |
+| GET | `/api/conversations/{id}/messages` | 대화 기록 로드 |
+| POST | `/api/conversations/{id}/messages` | 질문 `{query}` → answer \| clarify |
 
 ## 구조
 
 ```
 app/
-  api/                # mock 라우트 핸들러 (BE 붙으면 우회됨)
-    conversations/[id]/messages/route.ts
+  api/                # mock 라우트 핸들러 (BE 붙으면 우회됨, 실제 BE 구조 미러링)
     conversations/route.ts
+    conversations/[id]/messages/route.ts
     projects/route.ts
+    projects/[project_id]/conversations/route.ts
   components/         # ProjectSidebar · ChatPanel · EvidencePanel
   lib/
-    types.ts          # 가이드 #0001 API 계약(한국어 키) 동결
+    types.ts          # 실제 BE openapi 스키마(영어 키) 동결
     api.ts            # fetch 레이어 (NEXT_PUBLIC_API_BASE 기반)
     mock-data.ts      # mock 응답 데이터
-    useConversation.ts# 대화 상태 훅
+    useConversation.ts# 대화 상태 훅 (빈 BE면 첫 질문 시 대화 자동 생성)
   page.tsx            # 3-패널 조립
 ```
 
