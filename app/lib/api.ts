@@ -13,8 +13,12 @@ import type {
   Project,
 } from "./types";
 
+// [로컬 테스트 우회] WSL/Docker 환경에서 Next dev 프록시(undici)가 느린 /messages 요청에
+// ECONNRESET을 내므로, 브라우저가 백엔드를 직접 호출한다. localhost 동일 site라 쿠키(SameSite=lax)는
+// 그대로 동작하고, CORS는 백엔드(CORS_ORIGINS=localhost:3000)에서 허용한다. 원복 시 이 한 줄만 제거.
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(API_BASE + path, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
     // 익명 세션(쿠키) 영속 — 무로그인 영속(ADR-0005)
@@ -56,6 +60,11 @@ export function listProjects(): Promise<Project[]> {
 /** 좌측 리스트: 프로젝트별 대화 목록 (#0008) */
 export function listConversations(projectId: string): Promise<Conversation[]> {
   return http<Conversation[]>(`/api/projects/${projectId}/conversations`);
+}
+
+/** 좌측 리스트: 세션 전체 대화(프로젝트 미소속 포함) — 새로고침 후 복원용 (#0008, 유저스토리 #14) */
+export function listAllConversations(): Promise<Conversation[]> {
+  return http<Conversation[]>("/api/conversations");
 }
 
 /** "새 대화" 시작 — 프로젝트 안에 생성 (#0008) */

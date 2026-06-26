@@ -17,6 +17,27 @@ export interface VisualItem {
   license: string;
 }
 
+/** 용어 뜻풀이 한 건 (한국어기초사전) — openapi GlossaryItem */
+export interface GlossaryItem {
+  term: string;
+  word: string;
+  origin: string;
+  pos: string;
+  definition: string;
+}
+
+/** 유물 정보 한 건 (e뮤지엄 메타) — openapi ArtifactInfoItem */
+export interface ArtifactInfo {
+  entity: string;
+  era: string;
+  material: string;
+  origin: string;
+  size: string;
+  category: string;
+  source: string;
+  license: string;
+}
+
 /** mode=answer 응답 — openapi AnswerResponse */
 export interface AnswerResponse {
   mode: "answer";
@@ -24,6 +45,8 @@ export interface AnswerResponse {
   results: EvidenceItem[];
   visuals: VisualItem[];
   followups: string[];
+  glossary: GlossaryItem[];
+  artifact_info: ArtifactInfo[];
   confidence: number;
 }
 
@@ -50,6 +73,8 @@ export interface MessageOut {
   results?: EvidenceItem[];
   visuals?: VisualItem[];
   followups?: string[];
+  glossary?: GlossaryItem[];
+  artifact_info?: ArtifactInfo[];
   confidence?: number | null;
 }
 

@@ -18,6 +18,8 @@ export default function EvidencePanel({ answer }: Props) {
   }
 
   const { results, visuals } = answer;
+  const glossary = answer.glossary ?? [];
+  const artifactInfo = answer.artifact_info ?? [];
 
   return (
     <aside className="h-full overflow-y-auto border-l border-line bg-card/40 px-5 py-5">
@@ -52,6 +54,88 @@ export default function EvidencePanel({ answer }: Props) {
             </figure>
           ))}
         </div>
+      )}
+
+      {/* 유물 정보 — 답변 속 유물의 e뮤지엄 메타(시대·재질·출토지) */}
+      {artifactInfo.length > 0 && (
+        <>
+          <h2 className="mt-6 text-xs font-semibold tracking-wide text-muted">
+            유물 정보
+          </h2>
+          <div className="mt-2 space-y-2">
+            {artifactInfo.map((a, i) => (
+              <div
+                key={`${a.entity}-${i}`}
+                className="rounded-lg border border-line bg-card px-3 py-2"
+              >
+                <div className="text-sm font-medium">{a.entity}</div>
+                <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
+                  {a.era && (
+                    <>
+                      <dt className="text-muted">시대</dt>
+                      <dd className="text-ink/90">{a.era}</dd>
+                    </>
+                  )}
+                  {a.material && (
+                    <>
+                      <dt className="text-muted">재질</dt>
+                      <dd className="text-ink/90">{a.material}</dd>
+                    </>
+                  )}
+                  {a.origin && (
+                    <>
+                      <dt className="text-muted">출토</dt>
+                      <dd className="text-ink/90">{a.origin}</dd>
+                    </>
+                  )}
+                  {a.size && (
+                    <>
+                      <dt className="text-muted">크기</dt>
+                      <dd className="text-ink/90">{a.size}</dd>
+                    </>
+                  )}
+                  {a.category && (
+                    <>
+                      <dt className="text-muted">분류</dt>
+                      <dd className="text-ink/90">{a.category}</dd>
+                    </>
+                  )}
+                </dl>
+                <div className="mt-1 text-[11px] text-muted">{a.source}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* 용어 풀이 — 답변 속 어려운 용어 (한국어기초사전 krdict) */}
+      {glossary.length > 0 && (
+        <>
+          <h2 className="mt-6 text-xs font-semibold tracking-wide text-muted">
+            용어 풀이
+          </h2>
+          <dl className="mt-2 space-y-2">
+            {glossary.map((g, i) => (
+              <div
+                key={`${g.term}-${i}`}
+                className="rounded-lg border border-line bg-card px-3 py-2"
+              >
+                <dt className="text-sm font-medium">
+                  {g.word}
+                  {g.origin && (
+                    <span className="ml-1 text-xs text-muted">{g.origin}</span>
+                  )}
+                  {g.pos && (
+                    <span className="ml-1.5 text-[11px] text-accent">{g.pos}</span>
+                  )}
+                </dt>
+                <dd className="mt-0.5 text-sm leading-relaxed text-ink/90">
+                  {g.definition}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </>
       )}
 
       {/* 근거 자료 */}

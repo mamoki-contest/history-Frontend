@@ -21,8 +21,8 @@ export default function ProjectSidebar({
   return (
     <aside className="flex h-full flex-col border-r border-line bg-card/60">
       <div className="border-b border-line px-4 py-4">
-        <h1 className="text-base font-semibold">역사 고증 검색</h1>
-        <p className="mt-0.5 text-xs text-muted">ITKC 국역 · 조선 과학·발명</p>
+        <h1 className="text-base font-semibold">SADAM AI</h1>
+        <p className="mt-0.5 text-xs text-muted">역사 고증 검색</p>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">

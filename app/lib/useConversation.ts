@@ -5,7 +5,7 @@ import {
   createConversation,
   createStandaloneConversation,
   getMessages,
-  listConversations,
+  listAllConversations,
   listProjects,
   sendMessage,
 } from "./api";
@@ -25,6 +25,8 @@ function toChatMessage(m: MessageOut): ChatMessage {
     results: m.results ?? [],
     visuals: m.visuals ?? [],
     followups: m.followups ?? [],
+    glossary: m.glossary ?? [],
+    artifact_info: m.artifact_info ?? [],
     confidence: m.confidence ?? 0,
   };
 }
@@ -45,21 +47,34 @@ export function useConversation() {
   // 우측 패널이 보여줄 답변(메시지) id
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // 좌측 리스트 로드 — 프로젝트 목록 → 프로젝트별 대화 (#0008)
+  // 좌측 리스트 로드 — 세션 전체 대화(프로젝트 미소속 '기타 대화' 포함)까지 복원 (#0008, 유저스토리 #14)
+  // 과거: 프로젝트별 조회만 해서 새로고침 후 '기타 대화'가 사라졌음 → 세션 전체 조회로 수정.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const ps = await listProjects();
+        const [ps, convs] = await Promise.all([
+          listProjects(),
+          listAllConversations(),
+        ]);
         if (cancelled) return;
         setProjects(ps);
-        const lists = await Promise.all(
-          ps.map((p) => listConversations(p.id).catch(() => [])),
-        );
-        if (cancelled) return;
-        const all = lists.flat();
-        setConversations(all);
-        if (all.length && !activeConvId) setActiveConvId(all[0].id);
+        setConversations(convs);
+        // 새로고침/재방문 후에도 직전 대화를 그대로 이어보게 한다(최신순 첫 대화 복원).
+        if (convs.length && !activeConvId) {
+          const first = convs[0];
+          setActiveConvId(first.id);
+          const history = await getMessages(first.id).catch(
+            () => [] as MessageOut[],
+          );
+          if (cancelled) return;
+          const msgs = history.map(toChatMessage);
+          setMessages(msgs);
+          const lastAnswer = [...msgs]
+            .reverse()
+            .find((m) => m.role === "assistant" && m.mode === "answer");
+          if (lastAnswer) setSelectedId(lastAnswer.id);
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       }

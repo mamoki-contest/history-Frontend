@@ -55,7 +55,7 @@ function answer(
   followups: string[],
   confidence: number,
 ): AnswerResponse {
-  return { mode: "answer", answer: text, results, visuals, followups, confidence };
+  return { mode: "answer", answer: text, results, visuals, followups, glossary: [], confidence };
 }
 
 const 확인불가: AnswerResponse = answer(
