@@ -13,10 +13,14 @@ import type {
   Project,
 } from "./types";
 
-// [로컬 테스트 우회] WSL/Docker 환경에서 Next dev 프록시(undici)가 느린 /messages 요청에
-// ECONNRESET을 내므로, 브라우저가 백엔드를 직접 호출한다. localhost 동일 site라 쿠키(SameSite=lax)는
-// 그대로 동작하고, CORS는 백엔드(CORS_ORIGINS=localhost:3000)에서 허용한다. 원복 시 이 한 줄만 제거.
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
+// 기본: 상대경로(/api/*) 로 호출 → next.config.ts 의 rewrite 가 BE로 프록시한다(same-origin).
+//  → 배포(Vercel)에서 CORS 불필요 + 익명 세션 쿠키가 1st-party(SameSite=lax)로 정상 동작.
+// 로컬 WSL 에서 Next dev 프록시(undici)가 느린 /messages 에 ECONNRESET 을 내면,
+//  .env.local 에 NEXT_PUBLIC_DIRECT_API=1 을 넣어 브라우저가 BE를 직접 호출하도록 우회한다.
+const API_BASE =
+  process.env.NEXT_PUBLIC_DIRECT_API === "1"
+    ? (process.env.NEXT_PUBLIC_API_BASE ?? "")
+    : "";
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(API_BASE + path, {
     ...init,
